@@ -8,6 +8,7 @@ Terminal_code.txt
 celerybeat-schedule
 *.log
 .vsCode/
+.venv/
 venv/
 env/
 .idea/
