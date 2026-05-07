@@ -1,0 +1,364 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventory</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="icon" href="{% static 'img/logo.png' %}">
+    <link rel="stylesheet" href="{% static 'css/inventory.css' %}">
+</head>
+<body>
+
+    <div class="mobile-app">
+
+        <!-- HEADER -->
+        <div class="inventory-header">
+            <button onclick="history.back()" class="add-product">
+                <i class="fa fa-arrow-left"></i>
+            </button>
+            <h4>INVENTORY</h4>
+            <button class="add-product" data-bs-toggle="modal" data-bs-target="#addModal">
+                <i class="fa fa-plus"></i>
+            </button>
+
+        </div>
+
+        <!-- SEARCH -->
+        <div class="inventory-toolbar">
+            <div class="search-box">
+                <i class="fa fa-search"></i>
+                <input type="text" placeholder="Mahsulot qidirish..." id="searchInput">
+            </div>
+        </div>
+
+        <!-- PRODUCT LIST -->
+        <div id="productList" class="inventory-list">
+
+            {% for product in products %}
+            <div class="inventory-card" data-id="{{ product.id }}">
+
+                <!-- KARTA BOSHI (rasm + ma'lumot + toggle) -->
+                <div class="card-content">
+                    <!-- Rasm -->
+                    {% if product.image %}
+                        <img src="{{ product.image.url }}" class="product-img" alt="{{ product.name }}">
+                    {% else %}
+                        <div class="product-img no-image">📦</div>
+                    {% endif %}
+
+                    <!-- Ma'lumotlar -->
+                    <div class="product-info">
+                        <h5>{{ product.name }}</h5>
+                        <div class="product-details">
+                            <p class="stock-line">
+                                <strong>Stock:</strong> 
+                                <span class="stock-number">{{ product.stock }}</span> ta
+                            </p>
+                            <p class="stock-line">
+                                <strong>Sotuv narxi:</strong> 
+                                <span class="price">{{ product.price|floatformat:0 }} so‘m</span>
+                            </p>
+                            {% if product.cost_price and product.cost_price > 0 %}
+                            <p class="stock-line">
+                                <strong>Tan narxi:</strong> 
+                                <span class="cost-price">{{ product.cost_price|floatformat:0 }} so‘m</span>
+                            </p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Accordion toggle -->
+                    <button class="collapse-toggle-btn" type="button"
+                            data-bs-toggle="collapse" 
+                            data-bs-target="#actions{{ product.id }}"
+                            aria-expanded="false">
+                        <i class="fa fa-chevron-down"></i>
+                    </button>
+                </div>
+
+                <!-- ACCORDION (to'liq pastga ochiladi) -->
+                <div id="actions{{ product.id }}" class="collapse actions-panel">
+                    <div class="actions-buttons">
+                        <button class="action-btn stock-btn" data-product-id="{{ product.id }}">
+                            <i class="fa fa-plus"></i>
+                            Stok qo‘shish
+                        </button>
+                        <button class="action-btn history-btn"
+                                onclick="window.location.href='/products/product/{{ product.id }}/batches/'">
+                            <i class="fa fa-box"></i>
+                            Batch / History
+                        </button>
+                        <button class="action-btn edit-btn" data-id="{{ product.id }}">
+                            <i class="fa fa-edit"></i>
+                            Tahrirlash
+                        </button>
+
+                        {% if request.user.is_admin %}
+                        <button class="action-btn delete-btn" data-id="{{ product.id }}">
+                            <i class="fa fa-trash"></i>
+                            O‘chirish
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+
+            </div>
+            {% empty %}
+            <div class="empty-state">
+                <h3>Hozircha mahsulot yo‘q</h3>
+                <p>Yangi mahsulot qo‘shish uchun yuqoridagi + tugmasini bosing</p>
+            </div>
+            {% endfor %}
+
+        </div>
+
+        <!-- Pagination -->
+        <div id="paginationBox" class="pagination-box mt-4">
+            {% if page_obj and page_obj.paginator.num_pages > 1 %}
+                <nav aria-label="Product pagination">
+                    <ul class="pagination justify-content-center">
+
+                        <!-- Oldingi -->
+                        {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">
+                                    <i class="fa fa-angle-left"></i>
+                                </a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled"><span class="page-link"><i class="fa fa-angle-left"></i></span></li>
+                        {% endif %}
+
+                        <!-- Sahifalar -->
+                        {% for i in page_obj.paginator.page_range %}
+                            {% if i == 1 or i == page_obj.paginator.num_pages %}
+                                <li class="page-item {% if i == page_obj.number %}active{% endif %}">
+                                    <a class="page-link" href="?page={{ i }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">{{ i }}</a>
+                                </li>
+                            {% elif i >= page_obj.number|add:"-3" and i <= page_obj.number|add:"3" %}
+                                <li class="page-item {% if i == page_obj.number %}active{% endif %}">
+                                    <a class="page-link" href="?page={{ i }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">{{ i }}</a>
+                                </li>
+                            {% elif i == page_obj.number|add:"-4" or i == page_obj.number|add:"4" %}
+                                <li class="page-item disabled"><span class="page-link">...</span></li>
+                            {% endif %}
+                        {% endfor %}
+
+                        <!-- Keyingi -->
+                        {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">
+                                    <i class="fa fa-angle-right"></i>
+                                </a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled"><span class="page-link"><i class="fa fa-angle-right"></i></span></li>
+                        {% endif %}
+
+                    </ul>
+
+                    <div class="text-center text-muted small mt-2">
+                        {{ page_obj.number }} / {{ page_obj.paginator.num_pages }} sahifa 
+                        (Jami: {{ page_obj.paginator.count }} ta mahsulot)
+                    </div>
+                </nav>
+            {% endif %}
+        </div>
+        
+        <!-- FIXED ORTGA TUGMASI -->
+        <button onclick="history.back()" class="fixed-back-btn" title="Ortga qaytish">
+            <i class="fa fa-arrow-left"></i>
+            Ortga
+        </button>
+
+        <!-- ADD PRODUCT MODAL -->
+        <div class="modal fade" id="addModal">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+
+                    <form method="post" action="{% url 'products:product_create' %}" enctype="multipart/form-data">
+                        {% csrf_token %}
+
+                        <div class="modal-header">
+                            <h5 class="modal-title">Add New Product</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+
+                        <div class="modal-body">
+
+                            <!-- Name -->
+                            <div class="mb-3">
+                                {{ form.name.label_tag }}
+                                {{ form.name }}
+                                {{ form.name.errors }}
+                            </div>
+
+                            <!-- Category -->
+                            <div class="mb-3">
+                                {{ form.category.label_tag }}
+                                {{ form.category }}
+                                {{ form.category.errors }}
+                            </div>
+        
+
+                            <!-- Price -->
+                            <div class="mb-3">
+                                {{ form.price.label_tag }}
+                                {{ form.price }}
+                                {{ form.price.errors }}
+                            </div>
+
+                            <!-- Image -->
+                            <div class="mb-3">
+                                {{ form.image.label_tag }}
+                                {{ form.image }}
+                                {{ form.image.errors }}
+                            </div>
+
+                        </div>
+
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Add Product</button>
+                        </div>
+                    </form>
+
+                </div>
+            </div>
+        </div>
+
+                <!-- ====================== STOCK ADD MODAL ====================== -->
+        <div class="modal fade" id="stockModal">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+
+                    <form id="stockAddForm">
+                        {% csrf_token %}
+
+                        <input type="hidden" id="stockProductId">
+
+                        <div class="modal-header">
+                            <h5 class="modal-title">Stok qo‘shish</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+
+                        <div class="modal-body">
+
+                            <div class="mb-3">
+                                <label>Miqdor</label>
+                                <input type="number" name="quantity" class="form-control" required min="1">
+                            </div>
+
+                            <div class="mb-3">
+                                <label>Tan narxi (cost price)</label>
+                                <input type="number" name="cost_price" class="form-control" required min="0" step="0.01">
+                            </div>
+
+                        </div>
+
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Bekor qilish</button>
+                            <button type="submit" class="btn btn-success">Qo‘shish</button>
+                        </div>
+                    </form>
+
+                </div>
+            </div>
+        </div>
+
+                <!-- UPDATE PRODUCT MODAL -->
+
+        <div class="modal fade" id="updateModal">
+
+            <div class="modal-dialog">
+
+                <div class="modal-content">
+
+                    <form method="post" action="{% url 'products:product_update' %}" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        <input type="hidden" name="product_id" id="updateProductId">
+                        
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label>Name</label>
+                                <input type="text" class="form-control" name="name" id="updateName" required>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Sotuv narxi (so'm)</label>
+                                <input type="number" class="form-control" name="price" id="updatePrice" min="0" step="0.01" required>
+                            </div>
+
+                            
+                            <!-- Rasm qo'shish -->
+                            <div class="mb-3">
+                                <label>Yangi Rasm (ixtiyoriy)</label>
+                                <input type="file" class="form-control" name="image" accept="image/*">
+                                {% if product.image %}
+                                    <small>Hozirgi rasm: {{ product.image.url }}</small>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" id="cancelUpdate">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Update</button>
+                        </div>
+                    </form>
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- DELETE CONFIRM MODAL -->
+        <div class="modal fade" id="deleteModal">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+
+                    <form method="post" action="{% url 'products:product_delete' %}">
+                        {% csrf_token %}
+                        
+                        <div class="modal-header">
+                            <h5 class="modal-title">Delete Product</h5>
+                            <!-- X tugmasi - type="button" qo'shildi -->
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+
+                        <div class="modal-body">
+                            Are you sure you want to delete this product?
+                        </div>
+
+                        <input type="hidden" name="product_id" id="deleteProductId">
+
+                        <div class="modal-footer">
+                            <!-- Cancel tugmasi - type="button" bo'lishi SHART! -->
+                            <button type="button" class="btn btn-secondary" id="cancelDelete">
+                                Cancel
+                            </button>
+                            
+                            <!-- Delete tugmasi - submit bo'lishi kerak (type yozish ixtiyoriy, lekin yaxshiroq) -->
+                            <button type="submit" class="btn btn-danger">
+                                Delete
+                            </button>
+                        </div>
+                    </form>
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script src="{% static 'script/inventory.js' %}"></script>
+
+</body>
+
+</html>

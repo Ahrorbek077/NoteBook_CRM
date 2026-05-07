@@ -1,0 +1,660 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ client.name }} - Client Detail</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <link rel="icon" href="{% static 'img/logo.png' %}">
+    <link rel="stylesheet" href="{% static 'css/client-detail.css' %}">
+</head>
+<body>
+
+<div class="mobile-app">
+
+    <!-- HEADER -->
+    <div class="detail-header">
+        <button onclick="history.back()" class="back-btn">
+            <i class="fas fa-arrow-left"></i>
+            <span>Ortga</span>
+        </button>
+        <h4 class="mb-0">{{ client.name }}</h4>
+        <button class="edit-client-btn" data-id="{{ client.id }}">
+            <i class="fas fa-user"></i>
+        </button>
+    </div>
+
+    <div class="detail-content">
+
+        <!-- Client Info -->
+        <div class="client-info-card">
+            <div class="client-icon-big">
+                <i class="fas fa-user"></i>
+            </div>
+            <div class="client-info">
+                <h4>{{ client.name }}</h4>
+                <p><i class="fas fa-phone"></i> {{ client.phone }}</p>
+                {% if client.address %}
+                    <p><i class="fas fa-map-marker-alt"></i> {{ client.region|default:'Nomalum' }} - Manzil:{{ client.address|default:'Hali Joy yozilmagan' }}</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="action-grid">
+            <button onclick="openProductModal()" class="action-btn primary">
+                <i class="fas fa-hand-holding-usd fa-2x"></i>
+                <span>Mahsulot sotish</span>
+            </button>
+            
+            <button class="action-btn open-cart-btn">
+                <i class="fas fa-shopping-cart fa-2x"></i>
+                <span>Savatcha</span>
+            </button>
+            
+            <button onclick="openPaymentModal()" class="action-btn success">
+                <i class="fas fa-credit-card fa-2x"></i>
+                <span>To‘lov</span>
+            </button>
+            
+            <button onclick="history.back()" class="action-btn">
+                <i class="fas fa-arrow-left fa-2x"></i>
+                <span>Ortga</span>
+            </button>
+        </div>
+
+        <!-- History Section -->
+        <h5 class="section-title">To‘lov va Sotuv tarixi</h5>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle custom-dark-table">
+                <thead>
+                    <tr>
+                        <th>Sana</th>
+                        <th>Turi</th>
+                        <th>Tavsif</th>
+                        <th class="text-end">Summa</th>
+                        <th style="width: 60px;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in history %}
+                    <tr>
+                        <td><small class="text-light">{{ item.date|date:"d.m.Y H:i" }}</small></td>
+                        <td><span class="badge {{ item.badge_color }}">{{ item.badge }}</span></td>
+                        <td>
+                            <strong class="text-light">{{ item.display_type }}</strong><br>
+                            <small class="text-muted">{{ item.details }}</small>
+                        </td>
+                        <td class="text-end fw-bold {% if item.is_positive %}text-success{% else %}text-danger{% endif %}">
+                            {% if item.is_positive %}+{% endif %}{{ item.amount|floatformat:0 }} so'm
+                        </td>
+                        <td>
+                            {% if item.type == 'sale' %}
+                                <button class="btn btn-sm btn-outline-secondary collapse-toggle-btn"
+                                        type="button" data-bs-toggle="collapse"
+                                        data-bs-target="#sale-{{ item.sale_id }}">
+                                    <i class="fas fa-chevron-down"></i>
+                                </button>
+                                {{ item.serialized_items|json_script:item.sale_id }}
+                                <button class="return-sale-btn btn btn-sm btn-outline-danger"
+                                        data-sale-id="{{ item.sale_id }}"
+                                        data-items-id="{{ item.sale_id }}">
+                                    <i class="fas fa-undo"></i>
+                                </button>
+
+                            {% elif item.type == 'sale_return' %}
+                                <button class="btn btn-sm btn-outline-secondary collapse-toggle-btn"
+                                        type="button" data-bs-toggle="collapse"
+                                        data-bs-target="#return-{{ item.return_id }}">
+                                    <i class="fas fa-chevron-down"></i>
+                                </button>
+
+                            {% elif item.type == 'payment' %}
+                                <button class="btn btn-sm btn-outline-secondary collapse-toggle-btn"
+                                        type="button" data-bs-toggle="collapse"
+                                        data-bs-target="#payment-{{ item.payment_id }}">
+                                    <i class="fas fa-chevron-down"></i>
+                                </button>
+                                {% if not item.is_fully_refunded %}
+                                <button class="refund-payment-btn btn btn-sm btn-outline-warning"
+                                        data-payment-id="{{ item.payment_id }}"
+                                        data-remaining="{{ item.remaining_amount }}"
+                                        data-amount="{{ item.amount }}">
+                                    <i class="fas fa-undo"></i>
+                                </button>
+                                {% else %}
+                                <span class="badge bg-secondary">Qaytarilgan</span>
+                                {% endif %}
+
+                            {% elif item.type == 'payment_refund' %}
+                                <button class="btn btn-sm btn-outline-secondary collapse-toggle-btn"
+                                        type="button" data-bs-toggle="collapse"
+                                        data-bs-target="#payment-refund-{{ item.refund_id }}">
+                                    <i class="fas fa-chevron-down"></i>
+                                </button>
+                            {% endif %}
+                        </td>
+                    </tr>
+
+                    <!-- Sale Accordion -->
+                    {% if item.type == 'sale' %}
+                    <tr class="collapse accordion-row" id="sale-{{ item.sale_id }}">
+                        <td colspan="5" class="p-0">
+                            <div class="accordion-content p-3">
+                                <strong class="text-info">Sotilgan mahsulotlar:</strong>
+                                <ul class="list-unstyled mt-2 mb-0">
+                                    {% for si in item.items %}
+                                    <li class="d-flex justify-content-between py-2 border-bottom">
+                                        <span class="text-light">
+                                            {{ si.product.name }}
+                                            {% if si.returned_quantity > 0 %}
+                                                <span class="badge bg-warning text-dark ms-1">
+                                                    -{{ si.returned_quantity }} qaytarildi
+                                                </span>
+                                            {% endif %}
+                                        </span>
+                                        <span class="text-end">
+                                            <span class="{% if si.returned_quantity >= si.quantity %}text-decoration-line-through text-muted{% else %}text-light{% endif %}">
+                                                {{ si.quantity }} ta × {{ si.price_at_sale|floatformat:0 }} so'm
+                                            </span>
+                                            {% if si.returned_quantity > 0 and si.returned_quantity < si.quantity %}
+                                            <br>
+                                            <small class="text-success">Qoldi: {{ si.remaining }} ta</small>
+                                            {% endif %}
+                                        </span>
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endif %}
+
+                    <!-- Sale Return Accordion -->
+                    {% if item.type == 'sale_return' %}
+                    <tr class="collapse accordion-row" id="return-{{ item.return_id }}">
+                        <td colspan="5" class="p-0">
+                            <div class="accordion-content p-3">
+                                <strong class="text-warning">Qaytarilgan mahsulotlar:</strong>
+                                <ul class="list-unstyled mt-2 mb-0">
+                                    {% for ri in item.items %}
+                                    <li class="d-flex justify-content-between py-2 border-bottom">
+                                        <span class="text-light">{{ ri.product_name }}</span>
+                                        <span class="text-warning">
+                                            -{{ ri.quantity }} ta × {{ ri.price|floatformat:0 }} so'm
+                                            = {{ ri.subtotal|floatformat:0 }} so'm
+                                        </span>
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endif %}
+
+                    <!-- Payment Accordion -->
+                    {% if item.type == 'payment' %}
+                    <tr class="collapse accordion-row" id="payment-{{ item.payment_id }}">
+                        <td colspan="5" class="p-0">
+                            <div class="accordion-content p-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <strong class="text-success">To'lov tafsiloti:</strong>
+                                    {% if item.is_fully_refunded %}
+                                        <span class="badge bg-secondary">To'liq qaytarilgan</span>
+                                    {% endif %}
+                                </div>
+                                <ul class="list-unstyled mt-2 mb-0">
+                                    <li class="d-flex justify-content-between py-2 border-bottom">
+                                        <span class="text-muted">Jami to'lov</span>
+                                        <span class="text-success fw-bold">
+                                            +{{ item.amount|floatformat:0 }} so'm
+                                        </span>
+                                    </li>
+                                    {% if item.refunded_amount > 0 %}
+                                    <li class="d-flex justify-content-between py-2 border-bottom">
+                                        <span class="text-muted">Qaytarilgan</span>
+                                        <span class="text-warning fw-bold">
+                                            -{{ item.refunded_amount|floatformat:0 }} so'm
+                                        </span>
+                                    </li>
+                                    <li class="d-flex justify-content-between py-2">
+                                        <span class="text-muted">Qoldi</span>
+                                        <span class="{% if item.remaining_amount > 0 %}text-success{% else %}text-muted{% endif %} fw-bold">
+                                            {{ item.remaining_amount|floatformat:0 }} so'm
+                                        </span>
+                                    </li>
+                                    {% endif %}
+                                    {% if item.note %}
+                                    <li class="py-2">
+                                        <small class="text-muted">Izoh: {{ item.note }}</small>
+                                    </li>
+                                    {% endif %}
+                                </ul>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endif %}
+
+                    <!-- Payment Refund Accordion -->
+                    {% if item.type == 'payment_refund' %}
+                    <tr class="collapse accordion-row" id="payment-refund-{{ item.refund_id }}">
+                        <td colspan="5" class="p-0">
+                            <div class="accordion-content p-3">
+                                <strong class="text-warning">Qaytarish tafsiloti:</strong>
+                                <ul class="list-unstyled mt-2 mb-0">
+                                    <li class="d-flex justify-content-between py-2 border-bottom">
+                                        <span class="text-muted">Qaytarilgan summa</span>
+                                        <span class="text-warning fw-bold">
+                                            -{{ item.amount|floatformat:0 }} so'm
+                                        </span>
+                                    </li>
+                                    <li class="d-flex justify-content-between py-2 border-bottom">
+                                        <span class="text-muted">Asl to'lov</span>
+                                        <span class="text-muted">
+                                            To'lov #{{ item.payment_id }}
+                                        </span>
+                                    </li>
+                                    {% if item.reason %}
+                                    <li class="py-2">
+                                        <small class="text-muted">Sabab: {{ item.reason }}</small>
+                                    </li>
+                                    {% endif %}
+                                </ul>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endif %}
+
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center py-5 text-muted">
+                            Hali hech qanday operatsiya yo'q
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>             
+            </table>
+        </div>
+
+
+        <!-- History Pagination -->
+        {% if history_page_obj %}
+        <nav class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if history_page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?history_page={{ history_page_obj.previous_page_number }}">Oldingi</a>
+                    </li>
+                {% endif %}
+                
+                {% for num in history_page_obj.paginator.page_range %}
+                    <li class="page-item {% if num == history_page_obj.number %}active{% endif %}">
+                        <a class="page-link" href="?history_page={{ num }}">{{ num }}</a>
+                    </li>
+                {% endfor %}
+                
+                {% if history_page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?history_page={{ history_page_obj.next_page_number }}">Keyingi</a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+
+        <!-- Balans Card -->
+        <div class="balance-card mt-4">
+            <div class="row text-center">
+                <div class="col-4">
+                    <small class="text-muted">Jami sotilgan</small><br>
+                    <strong class="text-danger">{{ total_sold|floatformat:0 }} so‘m</strong>
+                </div>
+                <div class="col-4">
+                    <small class="text-muted">Jami to‘langan</small><br>
+                    <strong class="text-success">{{ total_paid|floatformat:0 }} so‘m</strong>
+                </div>
+                <div class="col-4">
+                    <small class="text-muted">Qoldiq qarz</small><br>
+                    <strong class="{% if calculated_debt > 0 %}text-danger{% else %}text-success{% endif %}">
+                        {{ calculated_debt|floatformat:0 }} so‘m
+                    </strong>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Client Edit Modal -->
+<div class="modal fade" id="editClientModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="editClientForm">
+                {% csrf_token %}
+                <input type="hidden" id="editClientId" value="{{ client.id }}">
+                <div class="modal-header">
+                    <h5 class="modal-title">Mijozni tahrirlash</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label>Ism</label>
+                        <input type="text" id="editName" class="form-control" value="{{ client.name }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label>Telefon</label>
+                        <input type="text" id="editPhone" class="form-control" value="{{ client.phone }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label>Manzil</label>
+                        <textarea id="editAddress" class="form-control" rows="2">{{ client.address }}</textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Bekor qilish</button>
+                    <button type="submit" class="btn btn-primary">Saqlash</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ====================== SAVATCHA MODAL ====================== -->
+<div class="modal fade" id="cartModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-shopping-cart me-2"></i>Savatcha
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="input-group mb-4">
+                    <input type="text" class="form-control" placeholder="Mahsulot qidirish..." id="searchInput">
+                    <button class="btn btn-outline-secondary" type="button"><i class="fas fa-search"></i></button>
+                </div>
+
+                <div id="emptyCart" class="text-center py-5">
+                    <i class="fas fa-box-open fa-5x text-muted mb-3"></i>
+                    <h5>Hozircha savatcha bo‘sh</h5>
+                    <p class="text-muted">Mahsulot qo‘shish uchun yuqoridagi tugmalardan foydalaning</p>
+                </div>
+
+                <!-- Mahsulotlar ro'yxati -->
+                <div id="cartItems" class="d-none">
+                    <!-- JS orqali to'ldiriladi -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <div class="w-100 d-flex justify-content-between align-items-center flex-wrap gap-3">
+                    <button onclick="clearCart()" class="btn btn-outline-danger">
+                        <i class="fas fa-trash"></i> Savatni tozalash
+                    </button>
+                    
+                    <div class="text-end">
+                        <strong id="cartCount">0 ta</strong> | 
+                        Jami: <strong id="cartTotal" class="text-success">0 so‘m</strong>
+                    </div>
+                    
+                    <button onclick="sellFromCart()" class="btn btn-success px-5">
+                        Sotish
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ====================== MAHSULOT TANLASH MODAL ====================== -->
+<div class="modal fade" id="productModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-box me-2"></i>Mahsulot tanlash
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Filter panel -->
+                <div class="row g-3 mb-4">
+                    <div class="col-md-7">
+                        <input type="text" id="productSearch" 
+                               class="form-control form-control-lg" 
+                               placeholder="Mahsulot nomini kiriting...">
+                    </div>
+                    <div class="col-md-5">
+                        <select id="categoryFilter" class="form-select form-select-lg">
+                            <option value="">Barcha kategoriyalar</option>
+                            {% for cat in categories %}
+                                <option value="{{ cat.id }}">{{ cat.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Mahsulotlar chiqadigan joy -->
+                <div id="productsContainer" class="row g-3">
+                    <!-- JavaScript orqali to'ldiriladi -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Yopish</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ====================== TO‘LOV MODAL ====================== -->
+<div class="modal fade" id="paymentModal" tabindex="-1">
+    <div class="modal-dialog modal-md">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-credit-card me-2"></i>To‘lov qabul qilish
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Mijoz:</label>
+                    <p class="mb-0 fs-5" id="paymentClientName">{{ client.name }}</p>
+                </div>
+                
+                <div class="mb-4">
+                    <label for="paymentAmount" class="form-label fw-bold">To‘lov summasi</label>
+                    <div class="input-group input-group-lg">
+                        <input type="number" 
+                               id="paymentAmount" 
+                               class="form-control text-end" 
+                               placeholder="0" 
+                               min="1000" step="1000">
+                        <span class="input-group-text">so‘m</span>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="paymentNote" class="form-label">Izoh (ixtiyoriy)</label>
+                    <textarea id="paymentNote" class="form-control" rows="2" 
+                              placeholder="Naqd pul, bank kartasi, o‘tkazma..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Bekor qilish</button>
+                <button type="button" id="savePaymentBtn" class="btn btn-success px-5">
+                    To‘lovni saqlash
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Qaytarish Modal -->
+<div class="modal fade" id="returnModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content bg-dark text-light">
+            <div class="modal-header border-bottom border-secondary">
+                <h5 class="modal-title" id="modalTitle">Sotuvni qaytarish</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+
+                <!-- Tanlov: To‘liq yoki Qisman -->
+                <div class="mb-3">
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="returnType" id="fullReturn" value="full" checked>
+                        <label class="form-check-label" for="fullReturn">
+                            <strong>To‘liq qaytarish</strong> (barcha mahsulotlar)
+                        </label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="returnType" id="partialReturn" value="partial">
+                        <label class="form-check-label" for="partialReturn">
+                            Qisman qaytarish (tanlab)
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Qisman qaytarish uchun mahsulotlar ro‘yxati (boshida yashirin) -->
+                <div id="partialSection" class="d-none">
+                    <strong class="text-info">Qaytariladigan mahsulotlar:</strong>
+                    <div id="return-items-list" class="mt-2"></div>
+                </div>
+
+                <div class="mt-3">
+                    <label class="form-label">Qaytarish sababi (ixtiyoriy)</label>
+                    <textarea id="return-reason" class="form-control bg-dark text-light" rows="2" 
+                              placeholder="Masalan: Mijozga yoqmadi..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Yopish</button>
+                <button type="button" id="confirm-return-btn" class="btn btn-danger">
+                    Qaytarishni tasdiqlash
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Payment Refund Modal -->
+<div class="modal fade" id="paymentRefundModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content bg-dark text-light">
+            <div class="modal-header border-bottom border-secondary">
+                <h5 class="modal-title">To'lovni qaytarish</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <p>Jami to'lov: <strong id="refund-total-amount"></strong></p>
+                    <p>Qaytarish mumkin: <strong id="refund-remaining-amount" class="text-warning"></strong></p>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Qaytarish summasi</label>
+                    <div class="input-group">
+                        <input type="number" id="refund-amount-input" 
+                               class="form-control bg-dark text-light"
+                               placeholder="0" min="1" step="1000">
+                        <span class="input-group-text">so'm</span>
+                    </div>
+                    <div class="mt-2">
+                        <button type="button" class="btn btn-sm btn-outline-warning" 
+                                id="refund-full-btn">
+                            To'liq qaytarish
+                        </button>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Sabab (ixtiyoriy)</label>
+                    <textarea id="refund-reason" class="form-control bg-dark text-light" 
+                              rows="2" placeholder="Qaytarish sababi..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Yopish</button>
+                <button type="button" id="confirm-refund-btn" class="btn btn-warning">
+                    Qaytarishni tasdiqlash
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ====================== FLOATING ACTION BUTTONS ====================== -->
+<div class="floating-actions">
+    <!-- Savatcha -->
+    <button id="floatCartBtn" class="float-btn float-cart-btn" title="Savatcha">
+        <i class="fas fa-shopping-cart"></i>
+        <span id="floatCartCount" class="float-badge">0</span>
+    </button>
+
+    <!-- Tez Sotish -->
+    <button id="quickSellBtn" class="float-btn float-sell-btn" title="Tez sotish">
+        <i class="fas fa-check"></i>
+    </button>
+
+    <!-- To'lov -->
+    <button onclick="openPaymentModal()" class="float-btn float-payment-btn" title="To‘lov qabul qilish">
+        <i class="fas fa-credit-card"></i>
+    </button>
+</div>
+
+<!-- ====================== CUSTOM CONFIRM MODAL ====================== -->
+<div class="modal fade" id="confirmModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 340px;">
+        <div class="modal-content" style="border-radius: 20px !important;">
+            <div class="modal-body text-center p-4">
+                <div id="confirmIcon" style="
+                    width: 56px; height: 56px; border-radius: 50%;
+                    background: rgba(255,77,109,0.12);
+                    border: 1.5px solid rgba(255,77,109,0.3);
+                    display: flex; align-items: center; justify-content: center;
+                    margin: 0 auto 16px; font-size: 1.4rem; color: #ff4d6d;">
+                    <i class="fas fa-question"></i>
+                </div>
+                <h6 id="confirmTitle" style="font-size:1rem; font-weight:600; margin-bottom:8px;"></h6>
+                <p id="confirmText" style="font-size:0.82rem; color:#8899b4; margin-bottom:24px;"></p>
+                <div style="display:flex; gap:10px;">
+                    <button id="confirmCancelBtn" class="btn btn-secondary w-100">Bekor qilish</button>
+                    <button id="confirmOkBtn" class="btn btn-danger w-100">Tasdiqlash</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+
+<script src="{% static 'script/client-detail.js' %}"></script>
+<script>
+    window.URLS = {
+        getProducts: "{% url 'products:products-modal' %}",
+        getFilteredProducts: "{% url 'products:products-filtered' %}",
+
+        addToCart: "{% url 'products:cart-add' 0 %}",
+        getCart: "{% url 'products:cart-get' 0 %}",
+        clearCart: "{% url 'products:cart-clear' 0 %}",
+
+        createSale: "{% url 'products:sale-create' 0 %}",
+        createPayment: "{% url 'products:payment-create' 0 %}",
+        paymentRefund: "{% url 'products:payment-refund' 0 %}",
+        // ← YANGI QO‘SHILADIGANLAR
+        saleReturn: "{% url 'products:sale-return' 0 %}",     // sale/<int:sale_id>/return/
+        saleCancel: "{% url 'products:sale-cancel' 0 %}",
+    };
+
+    window.currentClientId = {{ client.id|default:0 }};
+    console.log("Current Client ID:", window.currentClientId);
+</script>
+
+</body>
+</html>

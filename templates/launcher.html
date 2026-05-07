@@ -1,0 +1,277 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Savdo Tizimi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="icon" href="{% static 'img/logo.png' %}">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Mulish:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'css/launcher.css' %}">
+</head>
+<body>
+
+<!-- NOISE TEXTURE -->
+<div class="noise"></div>
+
+<div class="launcher">
+
+    <!-- ── HEADER ── -->
+    <div class="launcher-header">
+        <div class="lh-brand">
+            <div class="brand-mark">
+                <span>S</span>
+            </div>
+            <div class="brand-text">
+                <div class="brand-name">SAVDO</div>
+                <div class="brand-sub">Boshqaruv Tizimi</div>
+            </div>
+        </div>
+        <div class="lh-user">
+            <div class="user-avatar">
+                {{ request.user.username|slice:":2"|upper }}
+            </div>
+            <div class="user-info">
+                <div class="user-name">{{ request.user.username }}</div>
+                <div class="user-role">{{ request.user.get_role_display }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── QUICK CREATE ROW ── -->
+    <div class="quick-row">
+        <button class="quick-btn client-quick" id="openClientModal">
+            <div class="qb-icon"><i class="fa fa-user-plus"></i></div>
+            <div class="qb-text">
+                <span class="qb-label">Yangi</span>
+                <span class="qb-name">Mijoz</span>
+            </div>
+            <i class="fa fa-plus qb-plus"></i>
+        </button>
+        <button class="quick-btn product-quick" id="openProductModal">
+            <div class="qb-icon"><i class="fa fa-box"></i></div>
+            <div class="qb-text">
+                <span class="qb-label">Yangi</span>
+                <span class="qb-name">Mahsulot</span>
+            </div>
+            <i class="fa fa-plus qb-plus"></i>
+        </button>
+    </div>
+
+    <!-- ── MENU GRID ── -->
+    <div class="menu-section">
+        <div class="ms-label">ASOSIY MENYU</div>
+        <div class="menu-grid">
+
+            {% if request.user.is_admin %}
+            <a href="{% url 'dashboard:dashboard' %}" class="menu-tile" style="--delay:0.05s">
+                <div class="tile-icon dashboard-icon">
+                    <i class="fa fa-chart-line"></i>
+                </div>
+                <span class="tile-label">Dashboard</span>
+                <div class="tile-arrow"><i class="fa fa-arrow-right"></i></div>
+            </a>
+            {% endif %}
+
+            <a href="{% url 'clients:client_list' %}" class="menu-tile" style="--delay:0.1s">
+                <div class="tile-icon clients-icon">
+                    <i class="fa fa-users"></i>
+                </div>
+                <span class="tile-label">Mijozlar</span>
+                <div class="tile-arrow"><i class="fa fa-arrow-right"></i></div>
+            </a>
+
+            <a href="{% url 'products:product_list' %}" class="menu-tile" style="--delay:0.15s">
+                <div class="tile-icon products-icon">
+                    <i class="fa fa-store"></i>
+                </div>
+                <span class="tile-label">Mahsulotlar</span>
+                <div class="tile-arrow"><i class="fa fa-arrow-right"></i></div>
+            </a>
+
+            {% if request.user.is_admin %}
+            <a href="{% url 'dashboard:activity-log' %}" class="menu-tile" style="--delay:0.2s">
+                <div class="tile-icon history-icon">
+                    <i class="fa fa-history"></i>
+                </div>
+                <span class="tile-label">Tarix</span>
+                <div class="tile-arrow"><i class="fa fa-arrow-right"></i></div>
+            </a>
+
+            <a href="{% url 'accounts:directory' %}" class="menu-tile" style="--delay:0.25s">
+                <div class="tile-icon dir-icon">
+                    <i class="fa fa-list"></i>
+                </div>
+                <span class="tile-label">Ma'lumotnoma</span>
+                <div class="tile-arrow"><i class="fa fa-arrow-right"></i></div>
+            </a>
+
+            <a href="{% url 'accounts:staff-list' %}" class="menu-tile" style="--delay:0.3s">
+                <div class="tile-icon staff-icon">
+                    <i class="fa fa-id-card"></i>
+                </div>
+                <span class="tile-label">Ishchilar</span>
+                <div class="tile-arrow"><i class="fa fa-arrow-right"></i></div>
+            </a>
+            {% endif %}
+
+            <a href="{% url 'accounts:settings' %}" class="menu-tile" style="--delay:0.35s">
+                <div class="tile-icon settings-icon">
+                    <i class="fa fa-gear"></i>
+                </div>
+                <span class="tile-label">Sozlamalar</span>
+                <div class="tile-arrow"><i class="fa fa-arrow-right"></i></div>
+            </a>
+
+        </div>
+    </div>
+
+    <!-- ── LOGOUT ── -->
+    <a href="{% url 'accounts:logout' %}" class="logout-tile">
+        <i class="fa fa-right-from-bracket"></i>
+        Hisobdan chiqish
+    </a>
+
+</div>
+
+<!-- ══════════════ CLIENT CREATE MODAL ══════════════ -->
+<div class="modal-veil d-none" id="clientModal">
+    <div class="modal-sheet">
+        <div class="sheet-handle"></div>
+        <div class="sheet-head">
+            <div class="sheet-title">
+                <div class="sheet-icon client-icon-s">
+                    <i class="fa fa-user-plus"></i>
+                </div>
+                Yangi Mijoz
+            </div>
+            <button class="sheet-close" data-close="clientModal">
+                <i class="fa fa-times"></i>
+            </button>
+        </div>
+
+        <form id="clientCreateForm" class="sheet-form">
+            {% csrf_token %}
+            <div class="sf-field">
+                <label>Ism Familiya <span class="req">*</span></label>
+                <input type="text" name="name" class="sf-input"
+                       placeholder="Sardor Aliyev" required autocomplete="off">
+            </div>
+            <div class="sf-field">
+                <label>Telefon <span class="req">*</span></label>
+                <input type="text" name="phone" class="sf-input"
+                       placeholder="+998 90 123 45 67" required>
+            </div>
+            <div class="sf-field">
+                <label>Viloyat</label>
+                <select name="region" class="sf-input sf-select">
+                    <option value="">— Tanlang —</option>
+                    {% for region in regions %}
+                    <option value="{{ region.id }}">{{ region.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="sf-field">
+                <label>Manzil</label>
+                <input type="text" name="address" class="sf-input"
+                       placeholder="Toshkent shahar...">
+            </div>
+            <div class="form-msg d-none" id="clientMsg"></div>
+            <div class="sheet-actions">
+                <button type="button" class="sa-cancel" data-close="clientModal">Bekor</button>
+                <button type="submit" class="sa-submit client-submit" id="clientSubmit">
+                    <i class="fa fa-check"></i> Saqlash
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ══════════════ PRODUCT CREATE MODAL ══════════════ -->
+<div class="modal-veil d-none" id="productModal">
+    <div class="modal-sheet">
+        <div class="sheet-handle"></div>
+        <div class="sheet-head">
+            <div class="sheet-title">
+                <div class="sheet-icon product-icon-s">
+                    <i class="fa fa-box"></i>
+                </div>
+                Yangi Mahsulot
+            </div>
+            <button class="sheet-close" data-close="productModal">
+                <i class="fa fa-times"></i>
+            </button>
+        </div>
+
+        <form id="productCreateForm" class="sheet-form">
+            {% csrf_token %}
+            <div class="sf-field">
+                <label>Mahsulot nomi <span class="req">*</span></label>
+                <input type="text" name="name" class="sf-input"
+                       placeholder="Coca Cola 0.5L" required autocomplete="off">
+            </div>
+            <div class="sf-row">
+                <div class="sf-field">
+                    <label>Sotuv narxi <span class="req">*</span></label>
+                    <div class="sf-input-wrap">
+                        <input type="number" name="price" class="sf-input sf-mono"
+                               placeholder="15000" min="0" step="1" required>
+                        <span class="sf-suffix"></span>
+                    </div>
+                </div>
+                <div class="sf-field">
+                    <label>Kategoriya</label>
+                    <select name="category" class="sf-input sf-select">
+                        <option value="">— Tanlang —</option>
+                        {% for cat in categories %}
+                        <option value="{{ cat.id }}">{{ cat.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="sf-field">
+                <label>Rasm</label>
+                
+                <input type="file"
+                    name="image"
+                    class="sf-input"
+                    accept="image/*"
+                    id="productImageInput">
+
+                <!-- preview -->
+                <img id="imagePreview"
+                    style="margin-top:10px; max-width:100%; display:none; border-radius:8px;" />
+            </div>
+            <div class="sf-note">
+                <i class="fa fa-info-circle"></i>
+                Stock miqdori <strong>0</strong> bo'lib yaratiladi. Keyin batch qo'shing.
+            </div>
+            <div class="form-msg d-none" id="productMsg"></div>
+            <div class="sheet-actions">
+                <button type="button" class="sa-cancel" data-close="productModal">Bekor</button>
+                <button type="submit" class="sa-submit product-submit" id="productSubmit">
+                    <i class="fa fa-check"></i> Saqlash
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- SUCCESS FLASH -->
+<div class="success-flash d-none" id="successFlash">
+    <div class="sf-icon"><i class="fa fa-check"></i></div>
+    <div class="sf-text" id="successText"></div>
+</div>
+
+<script>
+window.LAUNCHER_URLS = {
+    clientCreate:  "{% url 'clients:client_create' %}",
+    productCreate: "{% url 'products:product_launcher_create' %}",
+    clientDetail:  "/clients/client/",
+};
+</script>
+<script src="{% static 'script/launcher.js' %}"></script>
+</body>
+</html>

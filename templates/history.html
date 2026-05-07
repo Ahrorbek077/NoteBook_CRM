@@ -1,0 +1,185 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Faoliyat Tarixi</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <link rel="icon" href="{% static 'img/logo.png' %}">
+    <link rel="stylesheet" href="{% static 'css/history.css' %}">
+</head>
+<body>
+
+<div class="page-shell">
+
+    <!-- HEADER -->
+    <div class="page-header">
+        <button onclick="history.back()" class="back-btn">
+            <i class="fa fa-arrow-left"></i>
+        </button>
+        <div class="header-center">
+            <span class="header-super">AUDIT LOG</span>
+            <h1 class="header-title">Faoliyat Tarixi</h1>
+        </div>
+        <div class="header-count" id="totalCount">
+            <span id="totalNum">—</span>
+            <span class="hc-label">ta</span>
+        </div>
+    </div>
+
+    <!-- FILTER BAR -->
+    <div class="filter-area">
+
+        <!-- Search -->
+        <div class="search-wrap">
+            <i class="fa fa-search search-icon"></i>
+            <input type="text" id="searchInput" class="search-input"
+                   placeholder="Qidirish: mijoz, mahsulot, foydalanuvchi...">
+            <button class="search-clear" id="searchClear">
+                <i class="fa fa-times"></i>
+            </button>
+        </div>
+
+        <!-- Type filter chips -->
+        <div class="type-chips" id="typeChips">
+            <button class="type-chip active" data-type="">
+                <i class="fa fa-border-all"></i> Barchasi
+            </button>
+            <button class="type-chip" data-type="sale">
+                <i class="fa fa-shopping-cart"></i> Sotuv
+            </button>
+            <button class="type-chip" data-type="sale_return">
+                <i class="fa fa-undo"></i> Qaytarish
+            </button>
+            <button class="type-chip" data-type="payment">
+                <i class="fa fa-credit-card"></i> To'lov
+            </button>
+            <button class="type-chip" data-type="payment_refund">
+                <i class="fa fa-undo-alt"></i> To'lov qaytarildi
+            </button>
+            <button class="type-chip" data-type="stock_add">
+                <i class="fa fa-boxes"></i> Kirim
+            </button>
+            <button class="type-chip" data-type="stock_adjust">
+                <i class="fa fa-sliders-h"></i> Tuzatish
+            </button>
+            <button class="type-chip" data-type="product_create">
+                <i class="fa fa-plus"></i> Mahsulot
+            </button>
+            <button class="type-chip" data-type="client_create">
+                <i class="fa fa-user"></i> Mijoz
+            </button>
+        </div>
+
+        <!-- Date filter -->
+        <div class="date-filter">
+            <div class="date-field">
+                <label>Dan</label>
+                <input type="date" id="dateFrom" class="date-input">
+            </div>
+            <div class="date-sep">—</div>
+            <div class="date-field">
+                <label>Gacha</label>
+                <input type="date" id="dateTo" class="date-input">
+            </div>
+            <button class="date-clear-btn" id="dateClear" title="Sanani tozalash">
+                <i class="fa fa-times"></i>
+            </button>
+        </div>
+
+    </div>
+
+    <!-- STATS ROW -->
+    <div class="stats-row" id="statsRow">
+        <div class="mini-stat" id="statSale">
+            <span class="ms-dot sale"></span>
+            <span class="ms-label">Sotuv</span>
+            <span class="ms-val" id="cntSale">—</span>
+        </div>
+        <div class="mini-stat" id="statPayment">
+            <span class="ms-dot payment"></span>
+            <span class="ms-label">To'lov</span>
+            <span class="ms-val" id="cntPayment">—</span>
+        </div>
+        <div class="mini-stat" id="statReturn">
+            <span class="ms-dot return"></span>
+            <span class="ms-label">Qaytarish</span>
+            <span class="ms-val" id="cntReturn">—</span>
+        </div>
+        <div class="mini-stat" id="statStock">
+            <span class="ms-dot stock"></span>
+            <span class="ms-label">Kirim</span>
+            <span class="ms-val" id="cntStock">—</span>
+        </div>
+    </div>
+
+    <!-- LOG LIST -->
+    <div class="log-list" id="logList">
+        <!-- JS renders here -->
+    </div>
+
+    <!-- LOAD MORE -->
+    <div class="load-more-wrap" id="loadMoreWrap">
+        <button class="load-more-btn" id="loadMoreBtn">
+            <i class="fa fa-chevron-down"></i>
+            Ko'proq yuklash
+        </button>
+    </div>
+
+    <!-- PAGINATION (SSR) -->
+    {% if page_obj.paginator.num_pages > 1 %}
+    <div class="ssr-pagination" id="ssrPagination">
+        {% if page_obj.has_previous %}
+        <a class="pag-btn" href="?page={{ page_obj.previous_page_number }}">
+            <i class="fa fa-chevron-left"></i>
+        </a>
+        {% endif %}
+        <span class="pag-info">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}
+        <a class="pag-btn" href="?page={{ page_obj.next_page_number }}">
+            <i class="fa fa-chevron-right"></i>
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+
+</div>
+
+<!-- DETAIL MODAL -->
+<div class="modal fade" id="detailModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header" id="detailModalHeader">
+                <div class="modal-title-wrap">
+                    <span class="detail-icon" id="detailIcon"></span>
+                    <div>
+                        <div class="detail-title" id="detailTitle">—</div>
+                        <div class="detail-meta" id="detailMeta">—</div>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="detailBody">
+                <!-- JS fills this -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- TOAST -->
+<div id="toastEl" class="toast-msg" style="display:none"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+window.HISTORY_AJAX_URL = "{% url 'dashboard:activity-log' %}";
+window.INITIAL_DATA = {
+    page: {{ page_obj.number }},
+    totalPages: {{ page_obj.paginator.num_pages }},
+    hasNext: {{ page_obj.has_next|yesno:"true,false" }},
+};
+</script>
+<script src="{% static 'script/history.js' %}"></script>
+</body>
+</html>

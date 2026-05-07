@@ -1,0 +1,338 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>{{ product.name }} — Batchlar</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <link rel="icon" href="{% static 'img/logo.png' %}">
+    <link rel="stylesheet" href="{% static 'css/batch.css' %}">
+</head>
+<body>
+
+<div class="page-shell">
+
+    <!-- HEADER -->
+    <div class="page-header">
+        <button onclick="history.back()" class="back-btn">
+            <i class="fa fa-arrow-left"></i>
+        </button>
+        <div class="header-center">
+            <span class="header-super">BATCH MANAGEMENT</span>
+            <h1 class="header-title">{{ product.name }}</h1>
+        </div>
+        <button class="add-stock-btn" id="openAddStock">
+            <i class="fa fa-plus"></i>
+        </button>
+    </div>
+
+    <!-- PRODUCT STATS -->
+    <div class="product-stats">
+        <div class="stat-card">
+            <span class="stat-icon"><i class="fa fa-boxes"></i></span>
+            <div>
+                <div class="stat-label">Umumiy qoldiq</div>
+                <div class="stat-value" id="totalStock">{{ product.stock }}</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <span class="stat-icon accent2"><i class="fa fa-layer-group"></i></span>
+            <div>
+                <div class="stat-label">Faol batchlar</div>
+                <div class="stat-value" id="activeBatchCount">{{ batches|length }}</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <span class="stat-icon accent3"><i class="fa fa-tag"></i></span>
+            <div>
+                <div class="stat-label">Sotuv narxi</div>
+                <div class="stat-value mono">{{ product.price|floatformat:0 }} <small>so'm</small></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- BATCH LIST -->
+    <div class="section-header">
+        <span class="section-title">Batchlar tarixi</span>
+        <span class="section-badge" id="batchBadge">{{ batches|length }} ta</span>
+    </div>
+
+    <div class="batch-list" id="batchList">
+        {% for batch in batches %}
+        <div class="batch-card {% if not batch.is_active %}batch-inactive{% endif %}"
+             id="batch-{{ batch.id }}"
+             data-id="{{ batch.id }}"
+             data-remaining="{{ batch.remaining_quantity }}"
+             data-received="{{ batch.quantity_received }}"
+             data-cost="{{ batch.cost_price }}">
+
+            <!-- BATCH MAIN ROW -->
+            <div class="batch-main">
+                <div class="batch-num">#{{ forloop.counter }}</div>
+
+                <div class="batch-info">
+                    <div class="batch-date">
+                        <i class="fa fa-calendar-alt"></i>
+                        {{ batch.created_at|date:"d.m.Y  H:i" }}
+                    </div>
+                    <div class="batch-nums">
+                        <span class="bnum-item">
+                            <span class="bnum-label">Kirim</span>
+                            <span class="bnum-val">{{ batch.quantity_received }}</span>
+                        </span>
+                        <span class="bnum-sep">→</span>
+                        <span class="bnum-item">
+                            <span class="bnum-label">Qoldi</span>
+                            <span class="bnum-val {% if batch.remaining_quantity == 0 %}zero{% elif batch.remaining_quantity < batch.quantity_received %}partial{% endif %}">
+                                {{ batch.remaining_quantity }}
+                            </span>
+                        </span>
+                        <span class="bnum-sep">·</span>
+                        <span class="bnum-item">
+                            <span class="bnum-label">Tan narx</span>
+                            <span class="bnum-val mono">{{ batch.cost_price|floatformat:0 }}</span>
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Status badge -->
+                <div class="batch-status-col">
+                    {% if not batch.is_active %}
+                        <span class="status-tag deleted">O'chirilgan</span>
+                    {% elif batch.remaining_quantity == 0 %}
+                        <span class="status-tag empty">Tugagan</span>
+                    {% elif batch.remaining_quantity < batch.quantity_received %}
+                        <span class="status-tag partial">Qisman</span>
+                    {% else %}
+                        <span class="status-tag full">To'liq</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- PROGRESS BAR -->
+            {% if batch.quantity_received > 0 %}
+            <div class="batch-progress">
+                <div class="progress-track">
+                    <div class="progress-fill {% if batch.remaining_quantity == 0 %}empty{% endif %}"
+                         style="width: {% widthratio batch.remaining_quantity batch.quantity_received 100 %}%">
+                    </div>
+                </div>
+                <span class="progress-pct">
+                    {% widthratio batch.remaining_quantity batch.quantity_received 100 %}%
+                </span>
+            </div>
+            {% endif %}
+
+            <!-- ACTION BUTTONS -->
+            {% if batch.is_active %}
+            <div class="batch-actions">
+                <button class="ba-btn adjust-btn"
+                        data-id="{{ batch.id }}"
+                        data-remaining="{{ batch.remaining_quantity }}"
+                        data-received="{{ batch.quantity_received }}"
+                        data-cost="{{ batch.cost_price }}">
+                    <i class="fa fa-sliders-h"></i>
+                    <span>Tuzatish</span>
+                </button>
+                <button class="ba-btn history-btn" data-id="{{ batch.id }}">
+                    <i class="fa fa-history"></i>
+                    <span>Tarix</span>
+                </button>
+                {% if batch.remaining_quantity == 0 %}
+                <button class="ba-btn delete-btn" data-id="{{ batch.id }}">
+                    <i class="fa fa-trash"></i>
+                    <span>O'chirish</span>
+                </button>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- ADJUSTMENT HISTORY (hidden by default) -->
+            <div class="adj-history d-none" id="adj-{{ batch.id }}">
+                <div class="adj-loading">
+                    <i class="fa fa-spinner fa-spin"></i> Yuklanmoqda...
+                </div>
+            </div>
+
+        </div>
+        {% empty %}
+        <div class="empty-state">
+            <div class="empty-icon"><i class="fa fa-layer-group"></i></div>
+            <h3>Hali batch yo'q</h3>
+            <p>Stock qo'shish uchun + tugmasini bosing</p>
+        </div>
+        {% endfor %}
+    </div>
+
+</div>
+
+<!-- ====================== ADD STOCK MODAL ====================== -->
+<div class="modal fade" id="addStockModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form id="addStockForm">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fa fa-plus-circle me-2"></i>Stock qo'shish
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="field-group">
+                        <label>Mahsulot</label>
+                        <div class="product-name-display">{{ product.name }}</div>
+                    </div>
+                    <div class="field-group">
+                        <label>Miqdor <span class="required">*</span></label>
+                        <input type="number" class="form-control" name="quantity"
+                               id="addQty" placeholder="100" min="1" required>
+                    </div>
+                    <div class="field-group">
+                        <label>Tan narxi (so'm) <span class="required">*</span></label>
+                        <input type="number" class="form-control" name="cost_price"
+                               id="addCost" placeholder="15000" min="1" step="1" required>
+                    </div>
+                    <div class="calc-preview" id="calcPreview">
+                        <span class="calc-label">Jami kirim qiymati:</span>
+                        <span class="calc-value" id="calcValue">—</span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Bekor</button>
+                    <button type="submit" class="btn btn-primary" id="addStockSubmit">
+                        <i class="fa fa-check me-1"></i>Qo'shish
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ====================== ADJUST MODAL ====================== -->
+<div class="modal fade" id="adjustModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form id="adjustForm">
+                {% csrf_token %}
+                <input type="hidden" id="adjustBatchId">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fa fa-sliders-h me-2"></i>Batch tuzatish
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Current info -->
+                    <div class="current-info" id="adjustCurrentInfo">
+                        <div class="ci-item">
+                            <span class="ci-label">Qolgan</span>
+                            <span class="ci-val" id="adjCurRemaining">—</span>
+                        </div>
+                        <div class="ci-item">
+                            <span class="ci-label">Tan narx</span>
+                            <span class="ci-val mono" id="adjCurCost">—</span>
+                        </div>
+                    </div>
+
+                    <div class="adj-tabs" id="adjTabs">
+                        <button type="button" class="adj-tab active" data-tab="qty">
+                            <i class="fa fa-sort-numeric-up"></i> Miqdor
+                        </button>
+                        <button type="button" class="adj-tab" data-tab="price">
+                            <i class="fa fa-tag"></i> Narx
+                        </button>
+                    </div>
+
+                    <!-- QTY TAB -->
+                    <div class="adj-tab-content" id="tabQty">
+                        <div class="field-group">
+                            <label>Miqdor o'zgarishi</label>
+                            <div class="qty-input-wrap">
+                                <button type="button" class="qty-op minus" id="qtyMinus">−</button>
+                                <input type="number" class="form-control" id="adjQtyChange"
+                                       name="quantity_change" value="0" placeholder="0">
+                                <button type="button" class="qty-op plus" id="qtyPlus">+</button>
+                            </div>
+                            <div class="field-hint">
+                                Musbat — qo'shish &nbsp;·&nbsp; Manfiy — ayirish
+                            </div>
+                        </div>
+                        <div class="adj-preview" id="adjQtyPreview"></div>
+                    </div>
+
+                    <!-- PRICE TAB -->
+                    <div class="adj-tab-content d-none" id="tabPrice">
+                        <div class="field-group">
+                            <label>Yangi tan narxi (so'm)</label>
+                            <input type="number" class="form-control" id="adjNewCost"
+                                   name="new_cost_price" placeholder="Yangi narx..." min="1" step="1">
+                        </div>
+                        <div class="adj-preview" id="adjPricePreview"></div>
+                    </div>
+
+                    <div class="field-group mt-3">
+                        <label>Sabab <span class="required">*</span></label>
+                        <textarea class="form-control" id="adjReason" name="reason"
+                                  rows="2" placeholder="Masalan: Hisob-kitob xatosi, qayta tekshirish..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Bekor</button>
+                    <button type="submit" class="btn btn-warning" id="adjustSubmit">
+                        <i class="fa fa-check me-1"></i>Tuzatish
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ====================== DELETE MODAL ====================== -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+            <form id="deleteForm">
+                {% csrf_token %}
+                <input type="hidden" id="deleteBatchId">
+                <div class="modal-header">
+                    <h5 class="modal-title text-danger">
+                        <i class="fa fa-trash me-2"></i>Batchni o'chirish
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <p style="color:var(--text-secondary)">
+                        Bu batch <strong style="color:var(--danger)">tugagan</strong> va arxivlanadi.
+                        FIFO va COGS ga ta'sir qilmaydi.
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Bekor</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fa fa-archive me-1"></i>Arxivlash
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- TOAST -->
+<div id="toastEl" class="toast-msg" style="display:none"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    const URLS = {
+        addStock:   "{% url 'products:add-stock' product.id %}",
+        adjust:     "{% url 'products:stock-adjustment' 0 %}",   // 0 → batch_id
+        deleteBatch:"{% url 'products:batch-delete' 0 %}",
+        adjHistory: "{% url 'products:batch-adjustments' 0 %}",
+    };
+    const PRODUCT_ID = {{ product.id }};
+</script>
+<script src="{% static 'script/batch.js' %}"></script>
+</body>
+</html>
