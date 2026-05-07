@@ -135,7 +135,6 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('analytics', '0001_initial'),
-        ('products', '0007_alter_product_category_alter_sale_client_and_more'),  # ← shu qator qo'shing
    
     ]
 
